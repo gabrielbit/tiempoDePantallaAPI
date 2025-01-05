@@ -1,0 +1,142 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+// Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
+// Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id        String   @id @default(uuid())
+  email     String   @unique
+  password  String
+  name      String
+  role      Role     @default(PARENT)
+  children  Child[]
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model Child {
+  id              String           @id @default(uuid())
+  name            String
+  age             Int
+  avatarUrl       String?
+  screenTimeLimit Int              // en minutos
+  screenTimeUsed  Int             @default(0)
+  parent          User             @relation(fields: [parentId], references: [id])
+  parentId        String
+  schedules       ChildOnSchedule[]
+  scheduleInstances ScheduleInstance[]
+  createdAt       DateTime         @default(now())
+  updatedAt       DateTime         @updatedAt
+}
+
+model Schedule {
+  id                String           @id @default(uuid())
+  name              String          // Ej: "Horario de tarde", "Horario de estudio"
+  startTime         String          // formato "HH:mm"
+  endTime           String
+  recommendedDuration Int
+  isActive          Boolean         @default(true)
+  appliedToAll      Boolean         @default(false)
+  children          ChildOnSchedule[]
+  tasks             TaskOnSchedule[]
+  instances         ScheduleInstance[]
+  createdAt         DateTime        @default(now())
+  updatedAt         DateTime        @updatedAt
+}
+
+model ScheduleInstance {
+  id          String   @id @default(uuid())
+  date        DateTime // Fecha de la instancia
+  schedule    Schedule @relation(fields: [scheduleId], references: [id])
+  scheduleId  String
+  child       Child    @relation(fields: [childId], references: [id])
+  childId     String
+  status      ScheduleStatus @default(PENDING)
+  startedAt   DateTime?
+  endedAt     DateTime?
+  duration    Int?     // Duración real en minutos
+  screenTime  Int?     // Tiempo de pantalla usado en esta instancia
+  taskStates  TaskState[]
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@unique([date, scheduleId, childId])
+}
+
+model TaskState {
+  id                 String           @id @default(uuid())
+  scheduleInstance   ScheduleInstance @relation(fields: [scheduleInstanceId], references: [id])
+  scheduleInstanceId String
+  task              Task             @relation(fields: [taskId], references: [id])
+  taskId            String
+  status            TaskStatus       @default(PENDING)
+  completedAt       DateTime?
+  startedAt         DateTime?        // Cuando se empezó la tarea
+  duration          Int?             // Duración real en minutos
+  notes             String?
+  createdAt         DateTime         @default(now())
+  updatedAt         DateTime         @updatedAt
+
+  @@unique([scheduleInstanceId, taskId])
+}
+
+model Task {
+  id              String           @id @default(uuid())
+  name            String
+  description     String
+  icon            String
+  isRequired      Boolean         @default(false)
+  schedules       TaskOnSchedule[]
+  taskStates      TaskState[]
+  createdAt       DateTime        @default(now())
+  updatedAt       DateTime        @updatedAt
+}
+
+model TaskOnSchedule {
+  task       Task     @relation(fields: [taskId], references: [id])
+  taskId     String
+  schedule   Schedule @relation(fields: [scheduleId], references: [id])
+  scheduleId String
+  
+  @@id([taskId, scheduleId])
+}
+
+model ChildOnSchedule {
+  child      Child    @relation(fields: [childId], references: [id])
+  childId    String
+  schedule   Schedule @relation(fields: [scheduleId], references: [id])
+  scheduleId String
+  
+  @@id([childId, scheduleId])
+}
+
+enum Role {
+  PARENT
+  CHILD
+}
+
+enum ScheduleStatus {
+  PENDING
+  IN_PROGRESS
+  COMPLETED
+  CANCELLED
+  SKIPPED
+}
+
+enum TaskStatus {
+  PENDING
+  IN_PROGRESS
+  COMPLETED
+  CANCELLED
+  SKIPPED
+}
