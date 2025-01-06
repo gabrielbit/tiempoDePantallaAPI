@@ -1,8 +1,8 @@
-import { Controller, Post, Body, Get, Param, Query, UseGuards } from '@nestjs/common';
+import { Controller, Post, Body, Get, Param, Query, UseGuards, BadRequestException } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiResponse, ApiBearerAuth } from '@nestjs/swagger';
 import { JwtAuthGuard } from '../auth/guards/jwt.guard';
 import { SchedulesService } from './schedules.service';
-import { CreateScheduleDto } from './dto/create-schedule.dto';
+import { CreateScheduleDto, VALID_ICONS } from './dto/create-schedule.dto';
 
 @ApiTags('schedules')
 @ApiBearerAuth()
@@ -15,6 +15,9 @@ export class SchedulesController {
   @ApiOperation({ summary: 'Create a new schedule' })
   @ApiResponse({ status: 201, description: 'Schedule created successfully' })
   async create(@Body() createScheduleDto: CreateScheduleDto) {
+    if (!VALID_ICONS.includes(createScheduleDto.icon as any)) {
+      throw new BadRequestException(`Invalid icon type. Must be one of: ${VALID_ICONS.join(', ')}`);
+    }
     return this.schedulesService.create(createScheduleDto);
   }
 
@@ -28,7 +31,10 @@ export class SchedulesController {
   @Get()
   @ApiOperation({ summary: 'Get all schedules' })
   async findAll() {
-    return this.schedulesService.findAll();
+    console.log('GET /schedules called');
+    const schedules = await this.schedulesService.findAll();
+    console.log('Schedules from DB:', JSON.stringify(schedules, null, 2));
+    return schedules;
   }
 
   @Get(':id')

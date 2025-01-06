@@ -1,3 +1,6 @@
+-- Limpiar las tablas existentes
+TRUNCATE TABLE "TaskOnSchedule", "ChildOnSchedule", "Schedule", "Task", "Child", "User" CASCADE;
+
 -- Insertar un usuario padre
 INSERT INTO "User" (id, email, password, name, role, "createdAt", "updatedAt")
 VALUES (
@@ -23,9 +26,34 @@ VALUES (
   NOW()
 );
 
--- Insertar algunas tareas
+-- Insertar algunas tareas con IDs de íconos correctos
 INSERT INTO "Task" (id, name, description, icon, "isRequired", "createdAt", "updatedAt")
 VALUES 
-  ('tsk_01', 'Hacer la tarea', 'Completar las tareas escolares', '📚', true, NOW(), NOW()),
-  ('tsk_02', 'Ordenar la habitación', 'Dejar todo en su lugar', '🏠', true, NOW(), NOW()),
-  ('tsk_03', 'Jugar videojuegos', 'Tiempo de diversión', '🎮', false, NOW(), NOW()); 
+  ('tsk_01', 'Tarea escolar', 'Completar las tareas del colegio', 'homework', true, NOW(), NOW()),
+  ('tsk_02', 'Ordenar la habitación', 'Dejar todo en su lugar', 'room', true, NOW(), NOW()),
+  ('tsk_03', 'Jugar videojuegos', 'Tiempo de diversión', 'gaming', false, NOW(), NOW());
+
+-- Insertar un horario de prueba
+INSERT INTO "Schedule" (id, name, "startTime", "endTime", "recommendedDuration", "isActive", "appliedToAll", "createdAt", "updatedAt")
+VALUES (
+  'sch_01',
+  'Horario de Tarde',
+  '14:00',
+  '18:00',
+  240,
+  true,
+  false,
+  NOW(),
+  NOW()
+);
+
+-- Asociar el horario con el niño
+INSERT INTO "ChildOnSchedule" ("childId", "scheduleId")
+VALUES ('chd_01', 'sch_01');
+
+-- Asociar tareas al horario
+INSERT INTO "TaskOnSchedule" ("taskId", "scheduleId")
+VALUES 
+  ('tsk_01', 'sch_01'),
+  ('tsk_02', 'sch_01'),
+  ('tsk_03', 'sch_01'); 

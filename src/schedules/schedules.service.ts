@@ -1,6 +1,7 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { CreateScheduleDto } from './dto/create-schedule.dto';
+import { Prisma } from '@prisma/client';
 
 @Injectable()
 export class SchedulesService {
@@ -9,24 +10,22 @@ export class SchedulesService {
   async create(createScheduleDto: CreateScheduleDto) {
     const { childrenIds, taskIds, ...scheduleData } = createScheduleDto;
 
+    const data: Prisma.ScheduleCreateInput = {
+      ...scheduleData,
+      children: childrenIds ? {
+        create: childrenIds.map(childId => ({
+          child: { connect: { id: childId } }
+        }))
+      } : undefined,
+      tasks: taskIds ? {
+        create: taskIds.map(taskId => ({
+          task: { connect: { id: taskId } }
+        }))
+      } : undefined
+    };
+
     return this.prisma.schedule.create({
-      data: {
-        ...scheduleData,
-        children: {
-          create: childrenIds.map(childId => ({
-            child: {
-              connect: { id: childId }
-            }
-          }))
-        },
-        tasks: {
-          create: taskIds.map(taskId => ({
-            task: {
-              connect: { id: taskId }
-            }
-          }))
-        }
-      },
+      data,
       include: {
         children: {
           include: {
@@ -72,20 +71,28 @@ export class SchedulesService {
   }
 
   async findAll() {
-    return this.prisma.schedule.findMany({
-      include: {
-        children: {
-          include: {
-            child: true
-          }
-        },
-        tasks: {
-          include: {
-            task: true
+    try {
+      console.log('Finding all schedules...');
+      const schedules = await this.prisma.schedule.findMany({
+        include: {
+          tasks: {
+            include: {
+              task: true
+            }
+          },
+          children: {
+            include: {
+              child: true
+            }
           }
         }
-      }
-    });
+      });
+      console.log('Found schedules:', JSON.stringify(schedules, null, 2));
+      return schedules;
+    } catch (error) {
+      console.error('Error finding schedules:', error);
+      throw error;
+    }
   }
 
   async findOne(id: string) {
